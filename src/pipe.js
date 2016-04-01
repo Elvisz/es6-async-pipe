@@ -136,7 +136,7 @@ function burner(...args) {
     define = handlers[i].toString().match(reg4Define);
 
     // get the define name
-    define = define.length ? define[1] : define;
+    define = define && 'length' in define ? define[1] : define;
 
     // cache the define for this.goto(name), if define name duplicate, we ignore it.
     if (define && !(define in definitions)) {
