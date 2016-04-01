@@ -1,11 +1,35 @@
 # es6-async-pipe
 Promise + Generator for async pipe.
 
+
+## install and import
+* `npm install es6-async-pipe --save-dev`
+* `import pipe from 'es6-async-pipe';`
+* you should use es6 module to import `es6-async-pipe`, you can `npm install --save-dev webpack babel-core babel-loader babel-preset-es2015 babel-preset-stage-0 babel-runtime`
+
+#### `package.js` example:
+```
+{
+  "name": "name",
+  "version": "1.0.0",
+  "description": "",
+  "devDependencies": {
+    "babel-core": "^6.7.4",
+    "babel-loader": "^6.2.4",
+    "babel-preset-es2015": "^6.6.0",
+    "babel-preset-stage-0": "^6.5.0",
+    "babel-runtime": "^6.6.1",
+    "es6-async-pipe": "^0.1.1",
+    "webpack": "^1.12.14"
+  }
+}
+```
+
 ## How to use
+
 ### Run async functions one by one
 ``` javascript
 function async(...args) {
-  this.define('async');
   const timeout = window.setTimeout(function() {
     window.clearTimeout(timeout);
     args[0].a++;
@@ -72,6 +96,14 @@ pipe({ a: 0 }, async, cancel, async).catch((reason) => {
 
 ### Goto a named pipe function
 ``` javascript
+function named(...args) {
+  this.define('async');
+  const timeout = window.setTimeout(function() {
+    window.clearTimeout(timeout);
+    args[0].a++;
+    this.next(...args);
+  }.bind(this), 1000 + Math.random() * 2000);
+}
 function goto(...args) {
   const timeout = window.setTimeout(function() {
     window.clearTimeout(timeout);
@@ -84,7 +116,7 @@ function goto(...args) {
 }
 
 // goto a named function
-pipe({ a: 0 }, async, goto, async).done((...args) => {
+pipe({ a: 0 }, named, goto, async).done((...args) => {
   console.log(args);
 });
 ```
@@ -144,4 +176,3 @@ pipe(fn, fn, fn, ...).beforeEach(fn);
 After each pipe function invoked
 ``` javascript
 pipe(fn, fn, fn, ...).afterEach(fn);
-```
