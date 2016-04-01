@@ -1,32 +1,7 @@
 # es6-async-pipe
 Promise + Generator for async pipe.
 
-
-## install and import
-* `npm install es6-async-pipe --save-dev`
-* `import pipe from 'es6-async-pipe';`
-* you should use es6 module to import `es6-async-pipe`, you can `npm install --save-dev webpack babel-core babel-loader babel-preset-es2015 babel-preset-stage-0 babel-runtime`
-
-#### `package.js` example:
-```
-{
-  "name": "name",
-  "version": "1.0.0",
-  "description": "",
-  "devDependencies": {
-    "babel-core": "^6.7.4",
-    "babel-loader": "^6.2.4",
-    "babel-preset-es2015": "^6.6.0",
-    "babel-preset-stage-0": "^6.5.0",
-    "babel-runtime": "^6.6.1",
-    "es6-async-pipe": "^0.1.1",
-    "webpack": "^1.12.14"
-  }
-}
-```
-
 ## How to use
-
 ### Run async functions one by one
 ``` javascript
 function async(...args) {
