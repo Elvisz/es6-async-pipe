@@ -27,7 +27,7 @@ class PipeControl {
           throw new TypeError('pipe#goto(define, ...args): define should be a string.');
         }
         iterator[symbol4next] = define;
-        iterator.afterEach.apply(null, iterator.value);
+        iterator.afterEach();
         resolve(args);
       },
 
@@ -43,7 +43,7 @@ class PipeControl {
       },
 
       next() {
-        iterator.afterEach.apply(null, iterator.value);
+        iterator.afterEach();
         iterator.next();
       }
     });
@@ -58,13 +58,12 @@ function promise(iterator) {
   return new Promise((resolve, reject) => {
     const handler = iterator.current();
 
-    iterator.beforeEach.apply(null, iterator.value);
+    iterator.beforeEach();
     if (reg4notVoidFn.test(handler.toString())) {
       handler.apply(new PipeControl(iterator, resolve, reject), iterator.value);
     } else {
       // void handler
       handler.apply(null, iterator.value);
-      iterator.beforeEach.apply(null, iterator.value);
       // resolver only accept one parameter
       resolve(iterator.value);
     }
@@ -78,12 +77,10 @@ function* runloop(iterator) {
         iterator.value = parameters;
         iterator.next();
       } else {
-        iterator.onComplete.apply(null, iterator.value);
-        iterator.after.apply(null, iterator.value);
+        iterator.onComplete();
       }
     }).catch((reason) => {
-      iterator.onError.apply(null, reason);
-      iterator.after.apply(null, iterator.value);
+      iterator.onError(reason);
     });
   }
 }
@@ -96,6 +93,7 @@ class Iterator {
   value = null;
   handlers = [];
   definitions = {};
+  log = [];
 
   constructor(...args) {
     let i = 0;
@@ -164,55 +162,101 @@ class Iterator {
     return handler;
   }
 
-  onComplete() {}
+  _onComplete() {}
 
-  onError() {}
+  _onError() {}
 
-  before() {}
+  _before() {}
 
-  after() {}
+  _after() {}
 
-  beforeEach() {}
+  _beforeEach() {}
 
-  afterEach() {}
+  _afterEach() {}
+
+  _debug() {}
+
+  onComplete(...args) {
+    this.reporter('Async pipe completed');
+    this._onComplete(this.value);
+    this.after();
+  }
+
+  onError() {
+    this.reporter('Async pipe occur some exception');
+    this._onError(this.value);
+    this.after();
+  }
+
+  before() {
+    this._before(this.value);
+  }
+
+  after() {
+    this._after(this.value);
+    this._debug(this.log);
+    this.log.push(`---------------------------------------------`);
+    this.log.push(`Time total(ms): ${Date.now() - this.timestamp}`);
+    this.log.push(`└ value final: ${JSON.stringify(this.value)}`);
+    this.log = [];
+    this.timestamp = null;
+  }
+
+  beforeEach() {
+    this.reporter('Enter pipe function');
+    this._beforeEach(this.value);
+  }
+
+  afterEach() {
+    this.reporter('Exit pipe function');
+    this._afterEach(this.value);
+  }
+
+  reporter(log) {
+    if (this.debug) {
+      this.log.push(`${log}`);
+      this.log.push(`├ Time offset(ms): ${Date.now() - this.timestamp}`);
+      this.log.push(`└ Value snapshot: ${JSON.stringify(this.value)}`);
+    }
+  }
 }
 
 class Pipe {
   constructor(iterator) {
     Object.assign(this, {
       before(fn) {
-        iterator.before = fn;
+        iterator._before = fn;
         return this;
       },
 
       after(fn) {
-        iterator.after = fn;
+        iterator._after = fn;
         return this;
       },
 
       beforeEach(fn) {
-        iterator.beforeEach = fn;
+        iterator._beforeEach = fn;
         return this;
       },
 
       afterEach(fn) {
-        iterator.afterEach = fn;
+        iterator._afterEach = fn;
         return this;
       },
 
       done(fn) {
-        iterator.onComplete = fn;
+        iterator._onComplete = fn;
         return this;
       },
 
       catch(fn) {
-        iterator.onError = fn;
+        iterator._onError = fn;
         return this;
       },
 
-      debug(bool, logger) {
-        iterator.debug = !!bool;
-        iterator.logger = logger || console;
+      debug(fn) {
+        iterator.debug = true;
+        iterator._debug = fn;
         return this;
       }
     });
@@ -220,6 +264,8 @@ class Pipe {
     // invoke all pipe functions after all sync statements done
     const start = Global.setTimeout(() => {
       Global.clearTimeout(start);
+      iterator.timestamp = Date.now();
+      iterator.before();
       iterator.next();
     }, 0);
   }

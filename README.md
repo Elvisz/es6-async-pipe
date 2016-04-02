@@ -135,9 +135,35 @@ pipe({ a: 0 }, async, function(...args){
 
 ## API
 ### pipe#debug
-Enable the debug to you console
+Enable the debug and return log stack as the parameter to the call.
 ``` javascript
-pipe(fn, fn, fn, ...).debug(true);
+pipe(fn, fn, fn, ...).debug(function(logs){
+    console.log(logs.join('\n'));
+});
+```
+Output like:
+```
+Enter pipe function
+├ Time offset(ms): 1
+└ Value snapshot: [{"a":0}]
+Exit pipe function
+├ Time offset(ms): 1122
+└ Value snapshot: [{"a":1}]
+Enter pipe function
+├ Time offset(ms): 1122
+└ Value snapshot: [{"a":2}]
+Exit pipe function
+├ Time offset(ms): 3701
+└ Value snapshot: [{"a":3}]
+Enter pipe function
+├ Time offset(ms): 3702
+└ Value snapshot: [{"a":4}]
+Exit pipe function
+├ Time offset(ms): 5330
+└ Value snapshot: [{"a":5}]
+Async pipe completed
+├ Time offset(ms): 5331
+└ Value snapshot: [{"a":5}]
 ```
 
 ### pipe#done
