@@ -1,8 +1,8 @@
 {
   "name": "es6-async-pipe",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A pipe for async/sync functions. ",
-  "main": "lib/pipe.js",
+  "main": "lib/es6-async-pipe.js",
   "scripts": {
     "compile": "babel -d lib/ src/",
     "prepublish": "npm run compile"
