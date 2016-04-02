@@ -38,6 +38,7 @@ let pipeB = pipe(data, ...fns); // create a pipe with initial data for following
 ```
 
 ### Run async/sync functions one by one
+#### `this.next(...params);`
 ``` javascript
 function async(...args) {
   const timeout = window.setTimeout(function() {
@@ -65,11 +66,12 @@ pipe({ a: 0 }, async, sync, async).done((...args) => {
 ```
 
 ### Done/cancel pipe but not wait pipe take all functions
+#### `this.done();` and `this.cancel(reason);`
 ``` javascript
 function done(...args) {
   const timeout = window.setTimeout(function() {
     window.clearTimeout(timeout);
-    this.done(...args);
+    this.done();
   }.bind(this), 1000 + Math.random() * 2000);
 }
 
@@ -88,6 +90,7 @@ pipe({ a: 0 }, async, cancel, async/* this function won't be executed */);
 ```
 
 ### Goto a named pipe function
+#### `this.define(name);` and `this.goto(name, ...parameters);`
 ``` javascript
 function named(...args) {
   this.define('async');
