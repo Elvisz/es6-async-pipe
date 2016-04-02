@@ -203,6 +203,7 @@ Async pipe completed
 ```
 
 ## TODO
+* Add tests!!!!!!!!!!!!!!!!!!!
 * `pipe.add(fns)`, `pipe.remove(fn)` and `pipe.insert(fn, position)`?
 * `pipe.sleep()` to resolve competition of other `setTimeout` functions?
 * multiple pipe runtime support to resolve competition of other pipe?
