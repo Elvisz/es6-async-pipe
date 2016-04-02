@@ -1,6 +1,6 @@
 {
   "name": "es6-async-pipe",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A pipe for async/sync functions. ",
   "main": "lib/es6-async-pipe.js",
   "scripts": {
