@@ -1,33 +1,43 @@
 # es6-async-pipe
 Promise + Generator for async pipe.
 
+## Understand `es6-async-pipe`
+* provide `pipe` for JavaScript but chainable;
+* provide `goto` for JavaScript but callback;
+* provide `Asynchronous Programming` but Generators, Promise and async/await;
+* pipe functions will be run after all sync statements be done;
 
-## install and import
-* `npm install es6-async-pipe --save-dev`
-* `import pipe from 'es6-async-pipe';`
-* you should use es6 module to import `es6-async-pipe`, you can `npm install --save-dev webpack babel-core babel-loader babel-preset-es2015 babel-preset-stage-0 babel-runtime`
+## Get Start
+This module export as es2015-module, you need use es6 module to import `es6-async-pipe`, you can `npm install --save-dev webpack babel-core babel-loader babel-preset-es2015 babel-preset-stage-0 babel-runtime`.
 
 #### `package.js` example:
 ```
 {
-  "name": "name",
-  "version": "1.0.0",
-  "description": "",
+  ...
   "devDependencies": {
     "babel-core": "^6.7.4",
     "babel-loader": "^6.2.4",
     "babel-preset-es2015": "^6.6.0",
     "babel-preset-stage-0": "^6.5.0",
     "babel-runtime": "^6.6.1",
-    "es6-async-pipe": "^0.1.1",
-    "webpack": "^1.12.14"
+    "webpack": "^1.12.14",
+    ...
   }
+  ...
 }
 ```
 
-## How to use
+### install and import
+* `npm install es6-async-pipe --save-dev`
+* `import pipe from 'es6-async-pipe';`
 
-### Run async functions one by one
+### Create a pipe
+```javascript
+let pipeA = pipe(...fns);
+let pipeB = pipe(data, ...fns); // create a pipe with initial data for following functions call
+```
+
+### Run async/sync functions one by one
 ``` javascript
 function async(...args) {
   const timeout = window.setTimeout(function() {
@@ -37,34 +47,24 @@ function async(...args) {
   }.bind(this), 1000 + Math.random() * 2000);
 }
 
-// just run async functions
-pipe({ a: 0 }, async, async, async).done((...args) => {
-  console.log(args);
-});
-```
-
-### Run sync functions one by one
-``` javascript
 function sync(...args) {
   args[0].a++;
   this.next(...args);
 }
 
-// just run sync functions
-pipe({ a: 0 }, sync, sync, sync).done((...args) => {
-  console.log(args);
-});
-```
+// just run async functions
+pipe({ a: 0 }, async, async, async);
 
-### Run async/sync functions one by one
-``` javascript
-// run async/sync functions
+// just run sync functions
+pipe({ a: 0 }, sync, sync, sync);
+
+// run async and sync functions
 pipe({ a: 0 }, async, sync, async).done((...args) => {
   console.log(args);
 });
 ```
 
-### Done pipe but not wait pipe take all functions
+### Done/cancel pipe but not wait pipe take all functions
 ``` javascript
 function done(...args) {
   const timeout = window.setTimeout(function() {
@@ -73,14 +73,6 @@ function done(...args) {
   }.bind(this), 1000 + Math.random() * 2000);
 }
 
-// done pipe but not wait pipe take all functions
-pipe({ a: 0 }, async, done, async).done((...args) => {
-  console.log(args);
-});
-```
-
-### Cancel pipe but not wait pipe take all functions
-``` javascript
 function cancel(...args) {
   const timeout = window.setTimeout(function() {
     window.clearTimeout(timeout);
@@ -88,10 +80,11 @@ function cancel(...args) {
   }.bind(this), 1000 + Math.random() * 2000);
 }
 
+// done pipe but not wait pipe take all functions
+pipe({ a: 0 }, async, done, async/* this function won't be executed */);
+
 // cancel pipe and throw reason
-pipe({ a: 0 }, async, cancel, async).catch((reason) => {
-  console.log(reason.reason);
-});
+pipe({ a: 0 }, async, cancel, async/* this function won't be executed */);
 ```
 
 ### Goto a named pipe function
@@ -104,6 +97,7 @@ function named(...args) {
     this.next(...args);
   }.bind(this), 1000 + Math.random() * 2000);
 }
+
 function goto(...args) {
   const timeout = window.setTimeout(function() {
     window.clearTimeout(timeout);
@@ -116,32 +110,74 @@ function goto(...args) {
 }
 
 // goto a named function
-pipe({ a: 0 }, named, goto, async).done((...args) => {
-  console.log(args);
-});
+pipe({ a: 0 }, named/* this function will be call 5 times */, goto, async);
 ```
 
-### Void function in pipe chain
+### Void function in pipe (NOT recommended)
 ``` javascript
-// invoke void function but keep the latest function returns
-pipe({ a: 0 }, async, function(...args){
-  console.log(args);
+pipe({ a: 0 }, async, function(){
   // no this.done(), this.cancel() and this.next()
-  // just do nothing
-}, async).done((...args) => {
-  console.log(args);
-});
+  // do another things not belongs to this pipe is allowed
+}, async);
 ```
+
+### .apply is great
+```javascript
+let fns = [];
+fns.push(fn);
+
+pipe.apply(null, fns);
+```
+
 
 ## API
+
+### pipe#done
+Do something when pipe is done:
+* if all pipe functions have been done;
+* some pipe function take this.done();
+``` javascript
+pipe(fn, fn, fn, ...).done(fn);
+```
+
+### pipe#catch
+If some exceptions, then catch them.
+``` javascript
+pipe(fn, fn, fn, ...).catch(fn);
+```
+
+### pipe#before
+Before pipe start.
+``` javascript
+pipe(fn, fn, fn, ...).before(fn);
+```
+
+### pipe#after
+After pipe end.
+``` javascript
+pipe(fn, fn, fn, ...).after(fn);
+```
+
+### pipe#beforeEach
+Before enter each pipe function.
+``` javascript
+pipe(fn, fn, fn, ...).beforeEach(fn);
+```
+
+### pipe#afterEach
+After quit each pipe function.
+``` javascript
+pipe(fn, fn, fn, ...).afterEach(fn);
+```
+
 ### pipe#debug
-Enable the debug and return log stack as the parameter to the call.
+Enable the debug and return logs.
 ``` javascript
 pipe(fn, fn, fn, ...).debug(function(logs){
     console.log(logs.join('\n'));
 });
 ```
-Output like:
+Console output:
 ```
 Enter pipe function
 ├ Time offset(ms): 1
@@ -166,39 +202,7 @@ Async pipe completed
 └ Value snapshot: [{"a":5}]
 ```
 
-### pipe#done
-Do something when pipe is done:
-* if all functions have been done
-* some function take this.done()
-``` javascript
-pipe(fn, fn, fn, ...).done(fn);
-```
-
-### pipe#catch
-If some exceptions, then catch them
-``` javascript
-pipe(fn, fn, fn, ...).catch(fn);
-```
-
-### pipe#before
-Before pipe start
-``` javascript
-pipe(fn, fn, fn, ...).before(fn);
-```
-
-### pipe#after
-After pipe end
-``` javascript
-pipe(fn, fn, fn, ...).after(fn);
-```
-
-### pipe#beforeEach
-Before each pipe function invoke
-``` javascript
-pipe(fn, fn, fn, ...).beforeEach(fn);
-```
-
-### pipe#afterEach
-After each pipe function invoked
-``` javascript
-pipe(fn, fn, fn, ...).afterEach(fn);
+## TODO
+* `pipe.add(fns)`, `pipe.remove(fn)` and `pipe.insert(fn, position)`?
+* `pipe.sleep()` to resolve competition of other `setTimeout` functions?
+* multiple pipe runtime support to resolve competition of other pipe?
