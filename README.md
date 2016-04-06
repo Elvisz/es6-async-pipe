@@ -124,6 +124,14 @@ pipe({ a: 0 }, async, function(){
 }, async);
 ```
 
+### Run pipe immediately (default will auto start when all sync statements done)
+``` javascript
+pipe({ a: 0 }, async, function(){
+  // no this.done(), this.cancel() and this.next()
+  // do another things not belongs to this pipe is allowed
+}, async).start();
+```
+
 ### .apply is great
 ```javascript
 let fns = [];
@@ -206,8 +214,6 @@ Async pipe completed
 ```
 
 ## TODO
-* Add tests!!!!!!!!!!!!!!!!!!!
-* `pipe.run()` to trigger pipe immediately?
 * `pipe.add(fns)`, `pipe.remove(fn)` and `pipe.insert(fn, position)`?
 * `pipe.sleep()` to resolve competition of other `setTimeout` functions?
 * multiple pipe runtime support to resolve competition of other pipe?

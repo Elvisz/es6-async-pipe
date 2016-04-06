@@ -17,104 +17,90 @@ if (typeof self === 'object') {
   throw new Error('No runtime!');
 }
 
-class PipeControl {
-  constructor(iterator, resolve, reject) {
-    Object.assign(this, {
-      define() {},
-
-      goto(define, ...args) {
-        if (typeof define !== 'string') {
-          throw new TypeError('pipe#goto(define, ...args): define should be a string.');
-        }
-        iterator[symbol4next] = define;
-        iterator.afterEach();
-        resolve(args);
-      },
-
-      done() {
-        resolve(symbol4done);
-      },
-
-      cancel(reason) {
-        reject({
-          handler: iterator.current(),
-          reason
-        });
-      },
-
-      next() {
-        iterator.afterEach();
-        iterator.next();
-      }
-    });
-  }
-}
-
-function promise(iterator) {
-  if (iterator.at === iterator.size) {
-    return Promise.resolve(symbol4done);
-  }
-
-  return new Promise((resolve, reject) => {
-    const handler = iterator.current();
-
-    iterator.beforeEach();
-    if (reg4notVoidFn.test(handler.toString())) {
-      handler.apply(new PipeControl(iterator, resolve, reject), iterator.value);
-    } else {
-      // void handler
-      handler.apply(null, iterator.value);
-      // resolver only accept one parameter
-      resolve(iterator.value);
-    }
-  });
+function deferral(context, fn, ...args) {
+  const timeout = Global.setTimeout(()=> {
+    Global.clearTimeout(timeout);
+    fn.apply(context, args);
+  }, 0);
 }
 
 function* runloop(iterator) {
   while (true) {
-    yield promise(iterator).then((parameters) => {
-      if (parameters !== symbol4done) {
-        iterator.value = parameters;
-        iterator.next();
-      } else {
-        iterator.onComplete();
-      }
-    }).catch((reason) => {
-      iterator.onError(reason);
-    });
+    yield iterator.promise().then(iterator.resolve.bind(iterator)).catch(iterator.reject.bind(iterator));
   }
 }
 
-class Iterator {
-  runloop = null;
-  timestamp = null;
-  at = -1;
-  debug = false;
-  value = null;
-  handlers = [];
-  definitions = {};
-  log = [];
+class PipeFunction {
+  constructor(iterator, resolve, reject) {
+    const PipeControl = {
+      next(...args){
+        iterator.afterEach();
+        iterator.current++;
+        resolve.apply(null, args);
+      },
+      goto(define, ...args){
+        iterator.afterEach();
+        if (typeof define !== 'string') {
+          throw new TypeError('pipe#goto(define, ...args): define should be a string.');
+        }
 
+        if (define in iterator.namedPipeFunctions) {
+          iterator.current = iterator.namedPipeFunctions[define];
+          resolve.apply(null, args);
+        }
+      },
+      done(){
+        iterator.afterEach();
+        iterator.current = iterator.size;
+        resolve.apply(null, args);
+      },
+      cancel(...args){
+        iterator.afterEach();
+        reject.apply(null, args);
+      }
+    };
+
+    Object.assign(this, PipeControl);
+  }
+
+  define() {}
+}
+
+class PromiseIterator {
   constructor(...args) {
-    let i = 0;
-    let define;
+    this.value = undefined;
+    this.handlers = args;
+    this.debug = false;
+    this.namedPipeFunctions = {};
 
     Object.defineProperties(this, {
       size: {
-        configurable: false,
-        get() {
+        get(){
           return this.handlers.length;
+        }
+      },
+      handler: {
+        get(){
+          if (this.current > -1 && this.current < this.size) {
+            return this.handlers[this.current];
+          } else {
+            throw new RangeError('PromiseIterator#getHandler: cannot find the handler.');
+          }
         }
       }
     });
 
-    this.handlers = args;
-
     if (typeof args[0] !== 'function') {
-      // allow first parameter as the initial value for following handlers
       this.value = [args[0]];
-      this.handlers.shift();
+      this.handlers = args.slice(1);
     }
+
+    this.init();
+  }
+
+  init() {
+    let i = 0;
+    let define;
 
     // get all named pipe function
     while (i < this.size) {
@@ -125,104 +111,157 @@ class Iterator {
       define = define ? define[1] : define;
 
       // cache the define for this.goto(name), if define name duplicate, we ignore it.
-      if (define && !(define in this.definitions)) {
-        this.definitions[define] = i;
+      if (typeof define === 'string' && !(define in this.namedPipeFunctions)) {
+        this.namedPipeFunctions[define] = i;
       }
 
       i++;
     }
 
+    // init runloop for burn down functions
     this.runloop = runloop(this);
   }
 
-  next() {
-    const define = this[symbol4next];
-
-    if (define in this.definitions) {
-      this.at = this.definitions[define];
-      this[symbol4next] = symbol4null;
-    } else {
-      this.at++;
-    }
-
-    this.runloop.next();
+  reset() {
+    this.current = 0;
+    this.namedPipeFunctions = {};
+    this.timestamp = null;
+    this.logs = [];
   }
 
-  current() {
-    if (this.at < 0 || this.at > this.size - 1) {
-      throw new RangeError('Array index out of range.');
-    }
+  promise() {
+    return new Promise((resolve, reject) => {
+      this.next(resolve, reject);
+    });
+  }
 
-    const handler = this.handlers[this.at];
+  resolve(...args) {
+    // generator yield will evaluate and execute the statement immediately, and then take a pause until any async process on that statement(promise) has been fulfilled. In order let the pipe run sync function, we need create a "async" here.
+    // otherwise, the generator will dead in "running state" and throw an error(if we catch the exception)
+    deferral(null, () => {
+      this.value = args;
+
+      if (this.current === this.size) {
+        this.after();
+      } else {
+        this.runloop.next();
+      }
+    });
+  }
+
+  reject(e) {
+    this.catch(e);
+  }
+
+  next(resolve, reject) {
+    const iterator = this;
+    const handler = iterator.handler;
 
     if (typeof handler !== 'function') {
-      throw new TypeError('pipe: handler should be a function.');
+      throw new TypeError('PromiseIterator#next: handler should be a function.')
     }
 
-    return handler;
-  }
+    this.beforeEach();
 
-  _onComplete() {}
-
-  _onError() {}
-
-  _before() {}
-
-  _after() {}
-
-  _beforeEach() {}
-
-  _afterEach() {}
-
-  _debug() {}
-
-  onComplete(...args) {
-    this.reporter('Async pipe completed');
-    this._onComplete(this.value);
-    this.after();
-  }
-
-  onError() {
-    this.reporter('Async pipe occur some exception');
-    this._onError(this.value);
-    this.after();
+    if (reg4notVoidFn.test(handler.toString())) {
+      handler.apply(new PipeFunction(iterator, resolve, reject), this.value);
+    } else {
+      // void handler
+      handler.apply(null, this.value);
+      // resolver only accept one parameter
+      resolve(this.value);
+      this.afterEach();
+      iterator.current++;
+    }
   }
 
   before() {
-    this._before(this.value);
+    this.reset();
+    if (this.debug) {
+      this.timestamp = Date.now();
+    }
+
+    if (typeof this._before === 'function') {
+      this._before.apply(null, this.value);
+    }
   }
 
   after() {
-    this._after(this.value);
-    this._debug(this.log);
-    this.log.push(`---------------------------------------------`);
-    this.log.push(`Time total(ms): ${Date.now() - this.timestamp}`);
-    this.log.push(`└ value final: ${JSON.stringify(this.value)}`);
-    this.log = [];
-    this.timestamp = null;
+    if (typeof this._after === 'function') {
+      this._after.apply(null, this.value);
+    }
+
+    if (this.debug) {
+      this.log('Summary', '');
+
+      this._debug(this.logs);
+    }
+
+    this.reset();
   }
 
   beforeEach() {
-    this.reporter('Enter pipe function');
-    this._beforeEach(this.value);
+    this.log('EnterPipeFunction', `Enter PipeFunction[${this.current}]`);
+    if (typeof this._beforeEach === 'function') {
+      this._beforeEach.apply(null, this.value);
+    }
   }
 
   afterEach() {
-    this.reporter('Exit pipe function');
-    this._afterEach(this.value);
+    this.log('QuitPipeFunction', `Quit PipeFunction[${this.current}]`);
+    if (typeof this._afterEach === 'function') {
+      this._afterEach.apply(null, this.value);
+    }
   }
 
-  reporter(log) {
+  start() {
+    this.before();
+    this.runloop.next();
+  }
+
+  log(type, log) {
     if (this.debug) {
-      this.log.push(`${log}`);
-      this.log.push(`├ Time offset(ms): ${Date.now() - this.timestamp}`);
-      this.log.push(`└ Value snapshot: ${JSON.stringify(this.value)}`);
+      this.logs.push({
+        type: type,
+        log: log,
+        offset: Date.now() - this.timestamp,
+        snapshot: JSON.stringify(this.value)
+      });
     }
+  }
+
+  catch(e) {
+    if (typeof this._reject === 'function') {
+      this._reject(e, this.value);
+    }
+  }
+
+  _debug(logs) {
+    let report = ['\n'];
+
+    logs.forEach((log) => {
+      if (log.type === 'Summary') {
+        report.push('-- Summary ----------------------------------------');
+        report.push(`├ Time total(ms): ${log.offset}`);
+        report.push(`└ Result snapshot: ${log.snapshot}`);
+      } else {
+        report.push(log.log);
+        report.push(`├ Time offset(ms): ${log.offset}`);
+        report.push(`└ Value snapshot: ${log.snapshot}`);
+        if (log.type === 'QuitPipeFunction') {
+          report.push('\n');
+        }
+      }
+    });
+
+    console.log(report.join('\n'));
   }
 }
 
 class Pipe {
-  constructor(iterator) {
+  constructor(...args) {
+    const iterator = new PromiseIterator(...args);
+
     Object.assign(this, {
       before(fn) {
         iterator._before = fn;
@@ -245,33 +284,29 @@ class Pipe {
       },
 
       done(fn) {
-        iterator._onComplete = fn;
+        iterator._after = fn;
         return this;
       },
 
       catch(fn) {
-        iterator._onError = fn;
+        iterator._reject = fn;
         return this;
       },
 
       debug(fn) {
         iterator.debug = true;
-        iterator._debug = fn;
+        if (typeof fn === 'function') {
+          iterator._debug = fn;
+        }
         return this;
       }
     });
 
     // invoke all pipe functions after all sync statements done
-    const start = Global.setTimeout(() => {
-      Global.clearTimeout(start);
-      iterator.timestamp = Date.now();
-      iterator.before();
-      iterator.next();
-    }, 0);
+    deferral(iterator, iterator.start);
   }
 }
 
 export default function pipe(...args) {
-  const iterator = new Iterator(...args);
-  return new Pipe(iterator);
+  return new Pipe(...args);
 }
