@@ -109,14 +109,38 @@ describe('es6-async-pipe', function() {
       this.done();
     });
 
-    it('should have this#next()', function() {
-      expect(control).to.have.property('next');
-      expect(control.next).to.be.a('function');
+    describe('this#next()', function() {
+      it('should have this#next()', function() {
+        expect(control).to.have.property('next');
+        expect(control.next).to.be.a('function');
+      });
+
+      it('this#next() should work properly', function(done) {
+        pipe(function() {
+          this.next('next');
+        }, function(param) {
+          expect(param).to.eq('next');
+          done();
+        });
+      });
     });
 
-    it('should have this#done()', function() {
-      expect(control).to.have.property('done');
-      expect(control.done).to.be.a('function');
+    describe('this#done()', function() {
+      it('should have this#done()', function() {
+        expect(control).to.have.property('done');
+        expect(control.done).to.be.a('function');
+      });
+
+      it('this#done() should work properly', function(done) {
+        pipe(function() {
+          this.next('done');
+        }, function() {
+          this.done();
+        }).done(function(param) {
+          expect(param).to.eq('done');
+          done();
+        });
+      });
     });
 
     it('should have this#define()', function() {
@@ -124,9 +148,22 @@ describe('es6-async-pipe', function() {
       expect(control.define).to.be.a('function');
     });
 
-    it('should have this#cancel()', function() {
-      expect(control).to.have.property('cancel');
-      expect(control.cancel).to.be.a('function');
+    describe('this#cancel()', function() {
+      it('should have this#cancel()', function() {
+        expect(control).to.have.property('cancel');
+        expect(control.cancel).to.be.a('function');
+      });
+
+      it('this#cancel() should work properly', function(done) {
+        pipe(function() {
+          this.next('done');
+        }, function() {
+          this.cancel('error');
+        }).catch(function(e) {
+          expect(e).to.eq('error');
+          done();
+        });
+      });
     });
   });
 
@@ -147,7 +184,7 @@ describe('es6-async-pipe', function() {
         expect(param.a).to.eq(1);
         param.a++;
         this.next(param);
-      }).done(function(param){
+      }).done(function(param) {
         expect(param.a).to.eq(2);
         done();
       });

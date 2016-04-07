@@ -1,10 +1,6 @@
 const reg4Define = /this\s*\.\s*define\s*\(\s*['"]([^\s\)'"]+)['"]\s*\)/;
 const reg4notVoidFn = /this\.(goto|done|cancel|next)\(([^\)]*)\)/;
 
-const symbol4done = Symbol('done');
-const symbol4next = Symbol('next');
-const symbol4null = Symbol('null');
-
 let Global;
 
 if (typeof self === 'object') {
@@ -52,7 +48,7 @@ class PipeFunction {
       done(){
         iterator.afterEach();
         iterator.current = iterator.size;
-        resolve.apply(null, args);
+        resolve.apply(null, iterator.value);
       },
       cancel(...args){
         iterator.afterEach();
@@ -66,12 +62,17 @@ class PipeFunction {
   define() {}
 }
 
-class PromiseIterator {
+class Iterator {
+  current = 0;
+  value = undefined;
+  handlers = [];
+  debug = false;
+  namedPipeFunctions = {};
+  timestamp = null;
+  logs = [];
+
   constructor(...args) {
-    this.value = undefined;
     this.handlers = args;
-    this.debug = false;
-    this.namedPipeFunctions = {};
 
     Object.defineProperties(this, {
       size: {
@@ -129,30 +130,6 @@ class PromiseIterator {
     this.logs = [];
   }
 
-  promise() {
-    return new Promise((resolve, reject) => {
-      this.next(resolve, reject);
-    });
-  }
-
-  resolve(...args) {
-    // generator yield will evaluate and execute the statement immediately, and then take a pause until any async process on that statement(promise) has been fulfilled. In order let the pipe run sync function, we need create a "async" here.
-    // otherwise, the generator will dead in "running state" and throw an error(if we catch the exception)
-    deferral(null, () => {
-      this.value = args;
-
-      if (this.current === this.size) {
-        this.after();
-      } else {
-        this.runloop.next();
-      }
-    });
-  }
-
-  reject(e) {
-    this.catch(e);
-  }
-
   next(resolve, reject) {
     const iterator = this;
     const handler = iterator.handler;
@@ -164,7 +141,11 @@ class PromiseIterator {
     this.beforeEach();
 
     if (reg4notVoidFn.test(handler.toString())) {
-      handler.apply(new PipeFunction(iterator, resolve, reject), this.value);
+      // generator yield will evaluate and execute the statement immediately, and then take a pause until any async process on that statement(promise) has been fulfilled. In order let the pipe run sync function, we need create a "async" here.
+      // otherwise, the generator will dead in "running state" and throw an error(if we catch the exception)
+      deferral(null, () => {
+        handler.apply(new PipeFunction(iterator, resolve, reject), this.value);
+      });
     } else {
       // void handler
       handler.apply(null, this.value);
@@ -176,7 +157,6 @@ class PromiseIterator {
   }
 
   before() {
-    this.reset();
     if (this.debug) {
       this.timestamp = Date.now();
     }
@@ -215,6 +195,7 @@ class PromiseIterator {
   }
 
   start() {
+    this.reset();
     this.before();
     this.runloop.next();
   }
@@ -258,11 +239,36 @@ class PromiseIterator {
   }
 }
 
+class PromiseIterator extends Iterator {
+  constructor(...args) {
+    super(...args);
+  }
+
+  promise() {
+    return new Promise((resolve, reject) => {
+      this.next(resolve, reject);
+    });
+  }
+
+  resolve(...args) {
+    this.value = args;
+
+    if (this.current === this.size) {
+      this.after();
+    } else {
+      this.runloop.next();
+    }
+  }
+
+  reject(e) {
+    this.catch(e);
+  }
+}
+
 class Pipe {
   constructor(...args) {
     const iterator = new PromiseIterator(...args);
-
-    Object.assign(this, {
+    const config = {
       before(fn) {
         iterator._before = fn;
         return this;
@@ -300,7 +306,9 @@ class Pipe {
         }
         return this;
       }
-    });
+    };
+
+    Object.assign(this, config);
 
     // invoke all pipe functions after all sync statements done
     deferral(iterator, iterator.start);
