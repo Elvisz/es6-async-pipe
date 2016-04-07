@@ -125,7 +125,6 @@ class Iterator {
 
   reset() {
     this.current = 0;
-    this.namedPipeFunctions = {};
     this.timestamp = null;
     this.logs = [];
   }
