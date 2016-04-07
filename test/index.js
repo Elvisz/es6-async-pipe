@@ -5,7 +5,58 @@ import {
 import pipe from '../lib/es6-async-pipe';
 
 describe('es6-async-pipe', function() {
-  context('API', function() {
+  context('Pipe for sync functions', function() {
+    it('sync functions should be trigger', function(done) {
+      pipe(function() {
+        done();
+        this.next();
+      });
+    });
+
+    it('sync should be work properly', function(done) {
+      pipe({a: 0}, function(param) {
+        expect(param.a).to.eq(0);
+        param.a++;
+        this.next(param);
+      }, function(param) {
+        expect(param.a).to.eq(1);
+        param.a++;
+        this.next(param);
+      }).done(function(param) {
+        expect(param.a).to.eq(2);
+        done();
+      });
+    });
+  });
+
+  context('Pipe for async functions', function() {
+    it('async functions should be trigger', function(done) {
+      pipe(function(data) {
+        setTimeout(function() {
+          done();
+          this.next(data);
+        }.bind(this), 50);
+      });
+    });
+
+    it('async should be work properly', function(done) {
+      pipe({a: 0}, function(param) {
+        setTimeout(function() {
+          expect(param.a).to.eq(0);
+          param.a++;
+          this.next(param);
+        }.bind(this), 30);
+      }, function(param) {
+        setTimeout(function() {
+          expect(param.a).to.eq(1);
+          done();
+          this.next(param);
+        }.bind(this), 30);
+      });
+    });
+  });
+
+  context('Pipe API', function() {
     describe('pipe#before()', function() {
       let mypipe = pipe({}, function() {});
 
@@ -101,12 +152,19 @@ describe('es6-async-pipe', function() {
     });
   });
 
-  context('Pipe Control', function() {
+  context('PipeFunction API', function() {
     let control;
 
     pipe(function() {
       control = this;
       this.done();
+    });
+
+    describe('this#define()', function() {
+      it('should have this#define()', function() {
+        expect(control).to.have.property('define');
+        expect(control.define).to.be.a('function');
+      });
     });
 
     describe('this#next()', function() {
@@ -143,11 +201,6 @@ describe('es6-async-pipe', function() {
       });
     });
 
-    it('should have this#define()', function() {
-      expect(control).to.have.property('define');
-      expect(control.define).to.be.a('function');
-    });
-
     describe('this#cancel()', function() {
       it('should have this#cancel()', function() {
         expect(control).to.have.property('cancel');
@@ -165,55 +218,26 @@ describe('es6-async-pipe', function() {
         });
       });
     });
-  });
 
-  context('Pipe sync', function() {
-    it('sync functions should be trigger', function(done) {
-      pipe(function() {
-        done();
-        this.next();
+    describe('this#goto()', function() {
+      it('should have this#goto()', function() {
+        expect(control).to.have.property('goto');
+        expect(control.goto).to.be.a('function');
       });
-    });
 
-    it('sync should be work properly', function(done) {
-      pipe({a: 0}, function(param) {
-        expect(param.a).to.eq(0);
-        param.a++;
-        this.next(param);
-      }, function(param) {
-        expect(param.a).to.eq(1);
-        param.a++;
-        this.next(param);
-      }).done(function(param) {
-        expect(param.a).to.eq(2);
-        done();
-      });
-    });
-  });
-
-  context('Pipe Async', function() {
-    it('async functions should be trigger', function(done) {
-      pipe(function(data) {
-        setTimeout(function() {
-          done();
-          this.next(data);
-        }.bind(this), 50);
-      });
-    });
-
-    it('async should be work properly', function(done) {
-      pipe({a: 0}, function(param) {
-        setTimeout(function() {
-          expect(param.a).to.eq(0);
-          param.a++;
-          this.next(param);
-        }.bind(this), 30);
-      }, function(param) {
-        setTimeout(function() {
-          expect(param.a).to.eq(1);
-          done();
-          this.next(param);
-        }.bind(this), 30);
+      it('this#goto() should work properly', function(done) {
+        pipe(function(param) {
+          this.define('first');
+          if (!!param) {
+            expect(param).to.eq('data from goto');
+            done();
+            this.done();
+          }
+          this.next('done');
+        }, function(param) {
+          expect(param).to.eq('done');
+          this.goto('first', 'data from goto');
+        });
       });
     });
   });
