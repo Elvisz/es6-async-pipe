@@ -14,7 +14,7 @@ if (typeof self === 'object') {
 }
 
 function deferral(context, fn, ...args) {
-  const timeout = Global.setTimeout(()=> {
+  const timeout = Global.setTimeout(() => {
     Global.clearTimeout(timeout);
     fn.apply(context, args);
   }, 0);
@@ -29,12 +29,12 @@ function* runloop(iterator) {
 class PipeFunction {
   constructor(iterator, resolve, reject) {
     const PipeControl = {
-      next(...args){
+      next(...args) {
         iterator.afterEach();
         iterator.current++;
         resolve.apply(null, args);
       },
-      goto(define, ...args){
+      goto(define, ...args) {
         iterator.afterEach();
         if (typeof define !== 'string') {
           throw new TypeError('pipe#goto(define, ...args): define should be a string.');
@@ -45,12 +45,12 @@ class PipeFunction {
           resolve.apply(null, args);
         }
       },
-      done(){
+      done() {
         iterator.afterEach();
         iterator.current = iterator.size;
         resolve.apply(null, iterator.value);
       },
-      cancel(...args){
+      cancel(...args) {
         iterator.afterEach();
         reject.apply(null, args);
       }
@@ -76,17 +76,17 @@ class Iterator {
 
     Object.defineProperties(this, {
       size: {
-        get(){
+        get() {
           return this.handlers.length;
         }
       },
       handler: {
-        get(){
+        get() {
           if (this.current > -1 && this.current < this.size) {
             return this.handlers[this.current];
-          } else {
-            throw new RangeError('PromiseIterator#getHandler: cannot find the handler.');
           }
+
+          throw new RangeError('PromiseIterator#getHandler: cannot find the handler.');
         }
       }
     });
@@ -134,7 +134,7 @@ class Iterator {
     const handler = iterator.handler;
 
     if (typeof handler !== 'function') {
-      throw new TypeError('PromiseIterator#next: handler should be a function.')
+      throw new TypeError('PromiseIterator#next: handler should be a function.');
     }
 
     this.beforeEach();
@@ -202,8 +202,8 @@ class Iterator {
   log(type, log) {
     if (this.debug) {
       this.logs.push({
-        type: type,
-        log: log,
+        type,
+        log,
         offset: Date.now() - this.timestamp,
         snapshot: JSON.stringify(this.value)
       });
@@ -217,7 +217,7 @@ class Iterator {
   }
 
   _debug(logs) {
-    let report = ['\n'];
+    const report = ['\n'];
 
     logs.forEach((log) => {
       if (log.type === 'Summary') {
@@ -239,10 +239,6 @@ class Iterator {
 }
 
 class PromiseIterator extends Iterator {
-  constructor(...args) {
-    super(...args);
-  }
-
   promise() {
     return new Promise((resolve, reject) => {
       this.next(resolve, reject);
