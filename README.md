@@ -2,10 +2,11 @@
 Promise + Generator for async pipe.
 
 ## Understand `es6-async-pipe`
-* provide `pipe` for JavaScript but chainable;
-* provide `goto` for JavaScript but callback;
-* provide `Asynchronous Programming` but Generators, Promise and async/await;
+* provide `pipe` for JavaScript but `chainable`;
+* provide `goto` for JavaScript but `callback`;
+* provide `Asynchronous Programming` without Generators and Promise;
 * pipe functions will be run after all sync statements be done;
+* allow multiple parameters to next pipe function;
 
 ## Get Start
 This module export as es2015-module, you need use es6 module to import `es6-async-pipe`, you can `npm install --save-dev webpack babel-core babel-loader babel-preset-es2015 babel-preset-stage-0 babel-runtime`.
@@ -122,14 +123,6 @@ pipe({ a: 0 }, async, function(){
   // no this.done(), this.cancel() and this.next()
   // do another things not belongs to this pipe is allowed
 }, async);
-```
-
-### Run pipe immediately (default will auto start when all sync statements done)
-``` javascript
-pipe({ a: 0 }, async, function(){
-  // no this.done(), this.cancel() and this.next()
-  // do another things not belongs to this pipe is allowed
-}, async).start();
 ```
 
 ### .apply is great
