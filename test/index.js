@@ -149,6 +149,33 @@ describe('es6-async-pipe', function() {
           done();
         });
       });
+
+      it('it should be functions', function() {
+        pipe('', '').catch(function(e) {
+          expect(e).to.eq('TypeError: PromiseIterator#next: handler should be a function.');
+        });
+      });
+    });
+
+    describe('pipe#debug()', function() {
+      let mypipe = pipe({}, function() {});
+
+      it('should have pipe#debug()', function() {
+        expect(mypipe).to.have.property('debug');
+        expect(mypipe.debug).to.be.a('function');
+      });
+
+      it('pipe#debug() should be triggered', function(done) {
+        pipe(function() {
+          this.next();
+        }).debug();
+
+        pipe(function() {
+          this.next();
+        }).debug(function() {
+          done();
+        });
+      });
     });
   });
 
@@ -223,6 +250,19 @@ describe('es6-async-pipe', function() {
       it('should have this#goto()', function() {
         expect(control).to.have.property('goto');
         expect(control.goto).to.be.a('function');
+      });
+
+      it('this#goto(define): define should be a string', function() {
+        pipe(function(param) {
+          this.define('first');
+          this.next('done');
+        }, function(param) {
+          try {
+            this.goto();
+          } catch (e) {
+            expect(e.toString()).to.eq('TypeError: pipe#goto(define, ...args): define should be a string.');
+          }
+        });
       });
 
       it('this#goto() should work properly', function(done) {

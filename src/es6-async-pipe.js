@@ -1,21 +1,9 @@
 const reg4Define = /this\s*\.\s*define\s*\(\s*['"]([^\s\)'"]+)['"]\s*\)/;
 const reg4notVoidFn = /this\.(goto|done|cancel|next)\(([^\)]*)\)/;
 
-let Global;
-
-if (typeof self === 'object') {
-  Global = self;
-} else if (typeof global === 'object') {
-  Global = global;
-} else if (typeof window === 'object') {
-  Global = window;
-} else {
-  throw new Error('No runtime!');
-}
-
 function deferral(context, fn, ...args) {
-  const timeout = Global.setTimeout(() => {
-    Global.clearTimeout(timeout);
+  const timeout = setTimeout(() => {
+    clearTimeout(timeout);
     fn.apply(context, args);
   }, 0);
 }

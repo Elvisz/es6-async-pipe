@@ -155,6 +155,33 @@ describe('es6-async-pipe', function () {
           done();
         });
       });
+
+      it('it should be functions', function () {
+        (0, _es6AsyncPipe2.default)('', '').catch(function (e) {
+          (0, _chai.expect)(e).to.eq('TypeError: PromiseIterator#next: handler should be a function.');
+        });
+      });
+    });
+
+    describe('pipe#debug()', function () {
+      var mypipe = (0, _es6AsyncPipe2.default)({}, function () {});
+
+      it('should have pipe#debug()', function () {
+        (0, _chai.expect)(mypipe).to.have.property('debug');
+        (0, _chai.expect)(mypipe.debug).to.be.a('function');
+      });
+
+      it('pipe#debug() should be triggered', function (done) {
+        (0, _es6AsyncPipe2.default)(function () {
+          this.next();
+        }).debug();
+
+        (0, _es6AsyncPipe2.default)(function () {
+          this.next();
+        }).debug(function () {
+          done();
+        });
+      });
     });
   });
 
@@ -229,6 +256,19 @@ describe('es6-async-pipe', function () {
       it('should have this#goto()', function () {
         (0, _chai.expect)(control).to.have.property('goto');
         (0, _chai.expect)(control.goto).to.be.a('function');
+      });
+
+      it('this#goto(define): define should be a string', function () {
+        (0, _es6AsyncPipe2.default)(function (param) {
+          this.define('first');
+          this.next('done');
+        }, function (param) {
+          try {
+            this.goto();
+          } catch (e) {
+            (0, _chai.expect)(e.toString()).to.eq('TypeError: pipe#goto(define, ...args): define should be a string.');
+          }
+        });
       });
 
       it('this#goto() should work properly', function (done) {
