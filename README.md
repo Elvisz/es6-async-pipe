@@ -2,6 +2,7 @@
 Promise + Generator for async pipe.
 
 [![Build Status](https://travis-ci.org/Elvisz/es6-async-pipe.svg?branch=master)](https://travis-ci.org/Elvisz/es6-async-pipe)
+[![Coverage Status](https://coveralls.io/repos/github/Elvisz/es6-async-pipe/badge.svg?branch=master)](https://coveralls.io/github/Elvisz/es6-async-pipe?branch=master)
 
 ## Understand `es6-async-pipe`
 * provide `pipe` for JavaScript but `chainable`;
